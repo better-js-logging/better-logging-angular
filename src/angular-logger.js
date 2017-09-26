@@ -14,7 +14,7 @@ var angular = window.angular;
 	angular.module('angular-logger', []).
 	provider('logEnhancer', function() {
 		var provider = this;
-
+		var logs = {};
         this.datetimePattern = 'LLL'; 	// default datetime stamp pattern, overwrite in config phase
         this.datetimeLocale = window.navigator.userLanguage || window.navigator.language || 'en';
         this.prefixPattern = '%s::[%s]> '; 		    // default prefix pattern, overwrite in config phase
@@ -24,7 +24,10 @@ var angular = window.angular;
 		// instanceFactoryFactory moved here for modding purposes; now you can repurpose all the logging functions after they are enhanced
 		this.instanceFactoryFactory = function($log) {
 			return function(context) {
-				return {
+				if (logs[context]) {
+					return logs[context];
+				}
+				var newLogs = {
 					trace	: logEnhancer.enhanceLogging($log.$$orig$log.debug, $log.LEVEL.TRACE, context, $log, provider.datetimePattern, provider.datetimeLocale, provider.prefixPattern),
 					debug	: logEnhancer.enhanceLogging($log.$$orig$log.debug, $log.LEVEL.DEBUG, context, $log, provider.datetimePattern, provider.datetimeLocale, provider.prefixPattern),
 					log		: logEnhancer.enhanceLogging($log.$$orig$log.log,   $log.LEVEL.INFO,  context, $log, provider.datetimePattern, provider.datetimeLocale, provider.prefixPattern),
@@ -32,6 +35,8 @@ var angular = window.angular;
 					warn	: logEnhancer.enhanceLogging($log.$$orig$log.warn,  $log.LEVEL.WARN,  context, $log, provider.datetimePattern, provider.datetimeLocale, provider.prefixPattern),
 					error	: logEnhancer.enhanceLogging($log.$$orig$log.error, $log.LEVEL.ERROR, context, $log, provider.datetimePattern, provider.datetimeLocale, provider.prefixPattern)
 				};
+				logs[context] = newLogs;
+				return newLogs;
 			};
 		};
 
@@ -48,7 +53,7 @@ var angular = window.angular;
 			};
 		};
 	}).
-	
+
 	/*
 		Default config and example config as well.
 		Overrides default logging pattern and global logLevel
@@ -69,7 +74,7 @@ var angular = window.angular;
             };
         */
     }]).
-    
+
     config(['$provide', 'logEnhancerProvider', function ($provide, p) {
 		$provide.decorator('$log', ['$delegate', function ($delegate) {
 			$delegate.logLevels = p.logLevels; // copy the initial loglevel config
@@ -85,7 +90,7 @@ var angular = window.angular;
 			};
 		}]);
 	}]).
-	
+
     run(['$log', 'logEnhancer', function ($log, logEnhancer) {
         logEnhancer.enhanceAngularLog($log);
         if (!sprintf) {
